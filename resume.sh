@@ -129,6 +129,20 @@ restore_dotfiles() {
   log "TODO: dotfiles restore not implemented yet (deliberately done last)"
 }
 
+# Queried at runtime instead of committed to the repo - this repo is public,
+# and there's no reason for a name/email to sit in public git history when
+# two prompts do the job.
+setup_git_identity() {
+  if git config --global user.email >/dev/null 2>&1; then
+    return
+  fi
+  log "Git identity (not stored in this repo - entered fresh each restore)"
+  read -rp "Git user.name: " git_name
+  read -rp "Git user.email: " git_email
+  git config --global user.name "$git_name"
+  git config --global user.email "$git_email"
+}
+
 main() {
   detect_os
   install_omarchy
@@ -138,6 +152,7 @@ main() {
   setup_libvirt
   setup_ufw
   setup_flatpak
+  setup_git_identity
   restore_dotfiles
 
   log "Done. Remaining manual steps:"
