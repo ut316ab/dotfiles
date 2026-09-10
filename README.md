@@ -7,19 +7,32 @@ vanilla Arch, and CachyOS — not EndeavourOS or Garuda.
 
 This is a **private** repo, so it can't just be `git clone`d on a machine with
 no GitHub auth yet. `resume.sh` can't do this part for you either — it lives
-inside the repo you haven't cloned yet. Run this first:
+inside the repo you haven't cloned yet. A fresh Arch/CachyOS/Omarchy install
+has no browser, so plan for that ahead of time — don't wait until you're
+mid-reinstall to figure out auth.
 
+### Preferred: pre-generate a token (no browser/phone needed at restore time)
+
+Before wiping the old machine, from any browser:
+1. https://github.com/settings/tokens → generate a classic PAT with `repo`,
+   `read:org`, `gist` scopes
+2. Save it in a password manager
+
+Then on the fresh machine:
 ```bash
 sudo pacman -S --needed git github-cli
-gh auth login       # interactive: GitHub.com, HTTPS, browser-based login
+echo "$GITHUB_TOKEN" | gh auth login --with-token
 gh auth setup-git   # wires git's credential helper to gh's stored token
 gh repo clone ut316ab/dotfiles ~/dotfiles
 cd ~/dotfiles && bash resume.sh
 ```
 
-The `gh auth login` step is the one part that can't be scripted — it's an
-interactive OAuth flow (open a URL, approve a one-time code in a browser on
-any device). Everything after that is unattended.
+### Fallback: device-code flow (needs a second device with a browser)
+
+If there's no pre-generated token, `gh auth login` (no `--web` flag) prints a
+short one-time code and a URL — open that URL from a phone or any other
+device, enter the code, and it authenticates. No browser needed on the
+machine being restored, but you do need *some* other device handy.
 
 ## What resume.sh does
 
