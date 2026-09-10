@@ -1,0 +1,3 @@
+# Third-party Omarchy plugins to restore via:
+#   omarchy plugin add <url> --enable --yes
+dorneles.omapod https://github.com/jvlianodorneles/omapod
