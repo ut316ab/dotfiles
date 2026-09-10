@@ -73,7 +73,18 @@ install_paru() {
   sudo pacman -S --needed --noconfirm paru
 }
 
+# pipewire-jack and jack2 both provide the virtual "jack" package and
+# explicitly conflict with each other. ffmpeg (pulled in transitively by
+# ffmpegthumbnailer, an Omarchy base package) needs "jack", and when the
+# whole package list is resolved as one giant transaction, pacman can pick
+# literal jack2 to satisfy that before crediting the also-requested
+# pipewire-jack - discovered this exact failure testing on a real CachyOS VM.
+# Installing pipewire-jack on its own first "locks in" the right provider
+# before anything else's dependency resolution gets a chance to pick jack2.
 install_packages() {
+  log "Installing pipewire-jack first (avoids a jack2 conflict - see comment above)"
+  sudo pacman -S --needed --noconfirm pipewire pipewire-alsa pipewire-jack pipewire-pulse
+
   log "Installing official-repo packages"
   # shellcheck disable=SC2046
   sudo pacman -S --needed --noconfirm $(grep -vE '^\s*(#|$)' "$REPO_DIR/packages/pacman.txt")
@@ -83,11 +94,19 @@ install_packages() {
   paru -S --needed --noconfirm $(grep -vE '^\s*(#|$)' "$REPO_DIR/packages/aur.txt")
 }
 
+# omarchy plugin add tries to hot-register the plugin with a running
+# omarchy-shell (Quickshell) process, and returns exit 1 if none is running -
+# which is exactly the case on a fresh install, before Hyprland/omarchy-shell
+# has ever been started. The plugin's files still get installed correctly
+# either way (the shell picks it up on its next start/rescan), so this
+# failure isn't fatal - don't let `set -e` kill the rest of the script over it.
 install_plugins() {
   log "Restoring Omarchy plugins"
   while read -r id url; do
     [[ -z $id || $id == \#* ]] && continue
-    omarchy plugin add "$url" --enable --yes
+    if ! omarchy plugin add "$url" --enable --yes; then
+      log "Plugin $id: files installed, but couldn't hot-register (omarchy-shell not running yet - fine on a fresh install)"
+    fi
   done <"$REPO_DIR/plugins.txt"
 }
 
