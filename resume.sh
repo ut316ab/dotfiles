@@ -184,10 +184,14 @@ setup_ufw() {
 }
 
 # Installing the flatpak package does NOT add Flathub - it has to be
-# registered as a remote separately.
+# registered as a remote separately. This is a system-wide (not --user)
+# remote, so run as root via sudo - without it, flatpak escalates through
+# PolicyKit instead, which prompts for a password on its own text-mode
+# agent and hangs the script waiting for it (found testing over SSH, where
+# no graphical polkit agent is running to handle it silently either).
 setup_flatpak() {
   log "Adding Flathub remote"
-  flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 }
 
 # Points the hook at THIS machine's actual $REPO_DIR rather than trusting a
