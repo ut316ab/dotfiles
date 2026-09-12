@@ -176,7 +176,11 @@ setup_ufw() {
   sudo ufw allow from 192.168.0.0/16 to 172.17.0.1 port 53 proto udp comment 'allow-docker-dns'
   sudo ufw default deny incoming
   sudo ufw default allow outgoing
-  sudo ufw enable
+  # --force skips ufw's own "may disrupt existing ssh connections" prompt -
+  # it only appears when ufw detects it's running under SSH, so it's silent
+  # at a local console anyway. Matches --noconfirm everywhere else in this
+  # script rather than being the one interactive exception.
+  sudo ufw --force enable
 }
 
 # Installing the flatpak package does NOT add Flathub - it has to be

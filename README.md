@@ -14,12 +14,11 @@ git clone https://github.com/ut316ab/dotfiles ~/dotfiles
 cd ~/dotfiles && bash resume.sh
 ```
 
-Run this at the local console, not over SSH. `resume.sh` is interactive by
-design (it asks about git identity and the Claude backup hook so you can
-choose what gets resumed), and `ufw enable` separately prompts for
-confirmation whenever it detects it's running under SSH — a prompt this
-script doesn't suppress, so over SSH it can sit waiting for a keypress you
-weren't expecting.
+`resume.sh` is interactive by design in two places — it asks about git
+identity and the Claude backup hook, so you can choose what gets resumed.
+`ufw enable` runs with `--force`, so its own separate "may disrupt existing
+ssh connections" confirmation (which only appears when it detects SSH) is
+suppressed too — the whole script is safe to run over SSH.
 
 ## What resume.sh does
 
