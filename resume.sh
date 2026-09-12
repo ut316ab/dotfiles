@@ -52,6 +52,24 @@ EOF
   fi
 }
 
+# omarchy-settings ships /etc/mkinitcpio.conf.d/omarchy_hooks.conf, which
+# unconditionally overwrites CachyOS's native systemd-based HOOKS with a
+# legacy set that includes `encrypt` - regardless of whether the system
+# actually has LUKS anywhere. Confirmed on a real CachyOS VM with zero LUKS
+# on disk (blkid/lsblk/fstab all plain vfat+btrfs): the cachyos/cachyos-lts
+# kernels then failed to boot ("failed to open encryption mapping...not a
+# LUKS volume"), while the plain linux kernel (built in the same mkinitcpio
+# batch, identical cmdline) booted fine - encrypt has no business being
+# forced on here. Strips just that one hook, keeps everything else
+# omarchy_hooks.conf sets (Plymouth splash theming, keymap, etc.), then
+# rebuilds every installed kernel's initramfs/UKI so the fix actually takes
+# effect immediately rather than waiting for the next kernel update.
+fix_cachyos_encrypt_hook() {
+  log "Removing the encrypt hook from omarchy_hooks.conf (no LUKS on this system) and rebuilding initramfs"
+  sudo sed -i -E '/^HOOKS=/ { s/\bencrypt\b//; s/  +/ /g }' /etc/mkinitcpio.conf.d/omarchy_hooks.conf
+  sudo mkinitcpio -P
+}
+
 install_omarchy() {
   case "$OS_ID" in
   omarchy)
@@ -65,12 +83,25 @@ install_omarchy() {
     bootstrap_cachyos_omarchy_repo
     log "Installing omarchy + omarchy-settings directly (no ISO installer on CachyOS)"
     sudo pacman -S --needed --noconfirm omarchy omarchy-settings
+    fix_cachyos_encrypt_hook
     ;;
   *)
     echo "Unsupported OS for this script: $OS_ID (only omarchy, arch, cachyos)" >&2
     exit 1
     ;;
   esac
+}
+
+# The official installer runs this itself to bring a fresh account up to the
+# current expected state (104 timestamped migration scripts as of writing,
+# tracked via marker files in ~/.local/state/omarchy/migrations). Installing
+# omarchy/omarchy-settings directly on CachyOS bypasses that entirely -
+# found testing a real CachyOS VM reboot: the bar showed "104 pending
+# migrations" and Hyprland failed to start. Idempotent (marker-based), so
+# safe to run unconditionally regardless of which install_omarchy branch ran.
+run_omarchy_migrations() {
+  log "Running Omarchy migrations"
+  omarchy-migrate
 }
 
 install_paru() {
@@ -119,6 +150,16 @@ install_packages() {
   log "Installing AUR packages via paru"
   # shellcheck disable=SC2046
   paru -S --needed --noconfirm $(grep -vE '^\s*(#|$)' "$REPO_DIR/packages/aur.txt")
+}
+
+# networkmanager is only a package in pacman.txt - nothing else in this
+# script ever enables the service. The install media/live environment
+# already has working network on its own, so this went unnoticed until a
+# real reboot left the installed system with no network at all (found
+# testing a real CachyOS VM reboot).
+enable_networkmanager() {
+  log "Enabling NetworkManager"
+  sudo systemctl enable --now NetworkManager
 }
 
 # Delegates to Omarchy's own installer instead of us tracking dropbox,
@@ -237,13 +278,30 @@ maybe_setup_claude_backup_hook() {
 # The apod plugin (installed above by install_plugins) supplies the wallpaper
 # itself via its bar widget's 1-click "set wallpaper" action - no separate
 # wallpaper file needs to live in this repo.
+#
+# The baseline (non-customized) files under ~/.config/hypr and ~/.config/omarchy
+# normally get seeded from /etc/skel/.config at account-creation time - that
+# never happens here, since omarchy/omarchy-settings are installed onto an
+# already-existing user account rather than through the official installer,
+# which handles this itself. Without it, hyprland.lua's require("hypr.autostart")
+# fails outright since autostart.lua (and other skel baseline files) simply
+# never existed (found testing a real CachyOS VM: "module 'hypr.autostart' not
+# found", plus 27 more similar errors). -n (no-clobber) so this only fills in
+# what's missing and never touches the customized files restored right after.
+seed_config_from_skel() {
+  log "Seeding baseline ~/.config/hypr and ~/.config/omarchy from /etc/skel (normally done at account creation, skipped here)"
+  mkdir -p ~/.config/hypr ~/.config/omarchy
+  cp -rn /etc/skel/.config/hypr/. ~/.config/hypr/
+  cp -rn /etc/skel/.config/omarchy/. ~/.config/omarchy/
+}
+
 restore_dotfiles() {
+  seed_config_from_skel
+
   log "Restoring Hyprland configs"
-  mkdir -p ~/.config/hypr
   cp -f "$REPO_DIR"/config/hypr/*.lua ~/.config/hypr/
 
   log "Restoring Quickshell (omarchy-shell) bar config"
-  mkdir -p ~/.config/omarchy
   cp -f "$REPO_DIR/config/omarchy/shell.json" ~/.config/omarchy/shell.json
 }
 
@@ -264,8 +322,10 @@ setup_git_identity() {
 main() {
   detect_os
   install_omarchy
+  run_omarchy_migrations
   install_paru
   install_packages
+  enable_networkmanager
   setup_dropbox
   install_plugins
   setup_libvirt
