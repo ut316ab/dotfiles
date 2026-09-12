@@ -89,7 +89,19 @@ install_paru() {
 # pipewire-jack - discovered this exact failure testing on a real CachyOS VM.
 # Installing pipewire-jack on its own first "locks in" the right provider
 # before anything else's dependency resolution gets a chance to pick jack2.
+#
+# CachyOS's own base image already has jack2 installed (discovered testing on
+# a real fresh CachyOS VM with no desktop environment) - installing
+# pipewire-jack standalone then hits the same conflict from the other
+# direction, and --noconfirm answers pacman's "Remove jack2?" prompt with its
+# default of N, aborting the whole transaction. Removing jack2 first (only if
+# actually present) avoids that regardless of which OS's base image it came from.
 install_packages() {
+  if pacman -Qi jack2 &>/dev/null; then
+    log "Removing jack2 (conflicts with pipewire-jack, which this setup uses instead)"
+    sudo pacman -R --noconfirm jack2
+  fi
+
   log "Installing pipewire-jack first (avoids a jack2 conflict - see comment above)"
   sudo pacman -S --needed --noconfirm pipewire pipewire-alsa pipewire-jack pipewire-pulse
 
