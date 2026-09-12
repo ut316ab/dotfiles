@@ -21,7 +21,15 @@ if [[ ! -d "$BACKUP_DIR" ]]; then
 fi
 
 mkdir -p ~/.claude
-cp -r "$BACKUP_DIR/projects" ~/.claude/
+
+# --update: skip any file that's newer locally than in the backup. Plain
+# `cp -r` overwrites unconditionally regardless of which side is actually
+# newer - confirmed causing real data loss (2026-09-12): a stale Dropbox
+# backup (from before the SessionEnd hook's path broke, see the settings.json
+# handling below) silently reverted several memory files that had been
+# updated more recently than the last successful backup. rsync -au only
+# pulls in what's actually missing or stale locally.
+rsync -au "$BACKUP_DIR/projects/" ~/.claude/projects/
 
 # The backed-up settings.json can carry a hooks.SessionEnd path baked in from
 # whatever machine/checkout last ran backup_claude.sh - restoring it verbatim
