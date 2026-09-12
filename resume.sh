@@ -173,6 +173,21 @@ enable_sddm() {
   sudo systemctl enable sddm
 }
 
+# Omarchy's SDDM greeter theme (Main.qml) reads userModel.lastUser and shows
+# only a password field for that user - no username entry at all. lastUser
+# is populated by SDDM itself after a first successful login, but on a
+# genuinely fresh install nothing has ever logged in via SDDM, so it's
+# empty and the greeter submits a blank username - a real deadlock: can't
+# log in without a last-user, can't set one without logging in first
+# (confirmed via journalctl -u sddm: "Authentication for user  ""  failed",
+# "user unknown"). Pre-seeding SDDM's own state file with the real user
+# breaks the deadlock exactly like a first successful login would have.
+seed_sddm_last_user() {
+  log "Seeding SDDM's last-user state (works around its empty-username deadlock on first boot)"
+  sudo mkdir -p /var/lib/sddm
+  printf '[Last]\nSession=omarchy.desktop\nUser=%s\n' "$USER" | sudo tee /var/lib/sddm/state.conf >/dev/null
+}
+
 # Delegates to Omarchy's own installer instead of us tracking dropbox,
 # dropbox-cli, nautilus-dropbox, libappindicator and python-gpgme ourselves -
 # omarchy-install-service-dropbox installs all of that, enables the
@@ -338,6 +353,7 @@ main() {
   install_packages
   enable_networkmanager
   enable_sddm
+  seed_sddm_last_user
   setup_dropbox
   install_plugins
   setup_libvirt
