@@ -70,6 +70,28 @@ fix_cachyos_encrypt_hook() {
   sudo mkinitcpio -P
 }
 
+# omarchy-defaults.conf sets TARGET_OS_NAME="Omarchy" for limine-entry-tool,
+# so installing omarchy creates a SEPARATE "/+Omarchy" Limine menu heading
+# rather than updating CachyOS's own existing "/+CachyOS" one - and its
+# ENABLE_UKI=yes setting deletes the old separate initramfs/vmlinuz files
+# once UKIs are built for the same kernels (limine-entry-tool.conf: "Duplicate
+# initramfs and vmlinuz files are automatically removed after generating
+# UKIs"). The old CachyOS entries are then left pointing at files that no
+# longer exist - confirmed on a real VM: they stopped booting once the
+# Omarchy UKIs were built (the very mkinitcpio -P run just above). Only
+# strips the top-level "/+CachyOS" section (and its own nested Snapshots
+# history); everything from "/+Omarchy" onward is untouched.
+remove_stale_cachyos_limine_entries() {
+  log "Removing the now-broken /+CachyOS Limine entries (superseded by /+Omarchy)"
+  sudo cp /boot/limine.conf /boot/limine.conf.pre-cachyos-cleanup.bak
+  sudo awk '
+    /^\/\+CachyOS$/ { skip=1; next }
+    /^\/\+/ && skip { skip=0 }
+    !skip
+  ' /boot/limine.conf | sudo tee /boot/limine.conf.tmp >/dev/null
+  sudo mv /boot/limine.conf.tmp /boot/limine.conf
+}
+
 install_omarchy() {
   case "$OS_ID" in
   omarchy)
@@ -84,6 +106,7 @@ install_omarchy() {
     log "Installing omarchy + omarchy-settings directly (no ISO installer on CachyOS)"
     sudo pacman -S --needed --noconfirm omarchy omarchy-settings
     fix_cachyos_encrypt_hook
+    remove_stale_cachyos_limine_entries
     ;;
   *)
     echo "Unsupported OS for this script: $OS_ID (only omarchy, arch, cachyos)" >&2
