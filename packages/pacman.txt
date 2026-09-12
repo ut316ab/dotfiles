@@ -28,8 +28,6 @@ docker-buildx
 docker-compose
 dosfstools
 dotnet-runtime
-dropbox
-dropbox-cli
 dua-cli
 efibootmgr
 evince
@@ -75,7 +73,6 @@ kernel-modules-hook
 lazydocker
 lazygit
 less
-libappindicator
 libpulse
 libreoffice-fresh
 libvips
@@ -98,7 +95,6 @@ moonlight-qt
 mpv
 mpv-mpris
 nautilus
-nautilus-dropbox
 nautilus-python
 networkmanager
 noto-fonts
@@ -134,6 +130,7 @@ qrencode
 qt6-imageformats
 quickshell
 ripgrep
+rsync
 ruby
 sddm
 slurp

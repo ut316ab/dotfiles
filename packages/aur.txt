@@ -1,5 +1,4 @@
 caffeine-ng
 gotop
-nasa-wallpaper
 paru
 zen-browser-bin

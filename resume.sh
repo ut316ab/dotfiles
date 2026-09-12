@@ -25,23 +25,31 @@ detect_os() {
 # the real omarchy + omarchy-settings packages directly is the right call
 # instead of relying on unofficial, currently-broken community forks.
 bootstrap_cachyos_omarchy_repo() {
-  if grep -q '^\[omarchy\]' /etc/pacman.conf; then
-    return
-  fi
-  log "Adding Omarchy's pacman repo (trust-all until the keyring is installed)"
-  sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
+  if ! grep -q '^\[omarchy\]' /etc/pacman.conf; then
+    log "Adding Omarchy's pacman repo (trust-all until the keyring is installed)"
+    sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
 
 [omarchy]
 SigLevel = Never
 Server = https://pkgs.omarchy.org/stable/$arch
 EOF
-  sudo pacman -Sy
-  sudo pacman -S --needed --noconfirm omarchy-keyring
-  sudo pacman-key --populate omarchy
-  # Drop the temporary trust-all override now that the keyring is trusted -
-  # falls back to pacman.conf's global SigLevel like every other repo.
-  sudo sed -i '/^\[omarchy\]$/{n;/^SigLevel = Never$/d}' /etc/pacman.conf
-  sudo pacman -Sy
+  fi
+
+  # Checked separately from the block above (not just "does [omarchy] exist")
+  # so a resume.sh run interrupted between adding the repo and dropping the
+  # trust-all override - power loss, ctrl-C, a forced reboot mid-install -
+  # finishes the trust dance on re-run instead of leaving the repo
+  # permanently unverified.
+  if grep -A1 '^\[omarchy\]$' /etc/pacman.conf | grep -q '^SigLevel = Never$'; then
+    log "Finishing Omarchy repo trust bootstrap (keyring not yet installed)"
+    sudo pacman -Sy
+    sudo pacman -S --needed --noconfirm omarchy-keyring
+    sudo pacman-key --populate omarchy
+    # Drop the temporary trust-all override now that the keyring is trusted -
+    # falls back to pacman.conf's global SigLevel like every other repo.
+    sudo sed -i '/^\[omarchy\]$/{n;/^SigLevel = Never$/d}' /etc/pacman.conf
+    sudo pacman -Sy
+  fi
 }
 
 install_omarchy() {
@@ -94,6 +102,21 @@ install_packages() {
   paru -S --needed --noconfirm $(grep -vE '^\s*(#|$)' "$REPO_DIR/packages/aur.txt")
 }
 
+# Delegates to Omarchy's own installer instead of us tracking dropbox,
+# dropbox-cli, nautilus-dropbox, libappindicator and python-gpgme ourselves -
+# omarchy-install-service-dropbox installs all of that, enables the
+# omarchy.dropbox bar widget (redundant with restore_dotfiles's shell.json
+# copy, but harmless), and starts the daemon. It does NOT set up autostart
+# though, so that one line stays ours - confirmed dropbox-cli's own
+# "autostart" subcommand just copies the package-shipped
+# /usr/share/applications/dropbox.desktop to ~/.config/autostart/dropbox.desktop.
+setup_dropbox() {
+  log "Installing and configuring Dropbox via Omarchy's own installer"
+  omarchy-install-service-dropbox
+  log "Enabling Dropbox autostart"
+  dropbox-cli autostart y
+}
+
 # omarchy plugin add tries to hot-register the plugin with a running
 # omarchy-shell (Quickshell) process, and returns exit 1 if none is running -
 # which is exactly the case on a fresh install, before Hyprland/omarchy-shell
@@ -144,8 +167,57 @@ setup_flatpak() {
   flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 }
 
+# Points the hook at THIS machine's actual $REPO_DIR rather than trusting a
+# path baked into a settings.json that may have been restored from a
+# different machine's Dropbox backup (e.g. a dev checkout elsewhere, vs the
+# README's documented ~/dotfiles clone target). Idempotent - merges just this
+# one key, safe to run whether or not restore_claude.sh has already restored
+# other settings.
+setup_claude_backup_hook() {
+  log "Wiring up the Claude history backup hook (SessionEnd -> backup_claude.sh)"
+  mkdir -p ~/.claude
+  local settings=~/.claude/settings.json
+  [[ -f "$settings" ]] || echo '{}' >"$settings"
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg cmd "bash $REPO_DIR/backup_claude.sh 2>/dev/null || true" '
+    .hooks.SessionEnd = [{
+      "hooks": [{
+        "type": "command",
+        "command": $cmd,
+        "statusMessage": "Backing up Claude history to Dropbox..."
+      }]
+    }]
+  ' "$settings" >"$tmp" && mv "$tmp" "$settings"
+}
+
+# This whole Claude-backup arrangement (Dropbox path, hook, restore_claude.sh)
+# is a personal setup specific to this repo's original owner - anyone else
+# cloning this public repo shouldn't have their ~/.claude/settings.json
+# silently rewritten. Ask, default to skip. `read` failing (piped/non-tty
+# stdin) falls through to skip rather than aborting the whole script.
+maybe_setup_claude_backup_hook() {
+  local ans
+  read -rp "Set up Claude Code history backup to Dropbox (SessionEnd hook, personal to this repo's owner)? [y/N] " ans || ans="n"
+  if [[ "$ans" =~ ^[Yy]$ ]]; then
+    setup_claude_backup_hook
+  else
+    log "Skipping Claude backup hook setup"
+  fi
+}
+
+# Scoped to just Hyprland + the Quickshell (omarchy-shell) bar config for now.
+# The apod plugin (installed above by install_plugins) supplies the wallpaper
+# itself via its bar widget's 1-click "set wallpaper" action - no separate
+# wallpaper file needs to live in this repo.
 restore_dotfiles() {
-  log "TODO: dotfiles restore not implemented yet (deliberately done last)"
+  log "Restoring Hyprland configs"
+  mkdir -p ~/.config/hypr
+  cp -f "$REPO_DIR"/config/hypr/*.lua ~/.config/hypr/
+
+  log "Restoring Quickshell (omarchy-shell) bar config"
+  mkdir -p ~/.config/omarchy
+  cp -f "$REPO_DIR/config/omarchy/shell.json" ~/.config/omarchy/shell.json
 }
 
 # Queried at runtime instead of committed to the repo - this repo is public,
@@ -167,11 +239,13 @@ main() {
   install_omarchy
   install_paru
   install_packages
+  setup_dropbox
   install_plugins
   setup_libvirt
   setup_ufw
   setup_flatpak
   setup_git_identity
+  maybe_setup_claude_backup_hook
   restore_dotfiles
 
   log "Done. Remaining manual steps:"
