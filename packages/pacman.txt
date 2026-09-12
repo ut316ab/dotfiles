@@ -177,5 +177,6 @@ xournalpp
 yaru-icon-theme
 yt-dlp
 zbar
+zenity
 zoxide
 zram-generator

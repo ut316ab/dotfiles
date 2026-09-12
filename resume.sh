@@ -122,6 +122,18 @@ install_omarchy() {
 # found testing a real CachyOS VM reboot: the bar showed "104 pending
 # migrations" and Hyprland failed to start. Idempotent (marker-based), so
 # safe to run unconditionally regardless of which install_omarchy branch ran.
+#
+# Deliberately NOT run right after install_omarchy. Migrations assume the
+# fully-provisioned system the official installer would normally hand off to
+# them (all packages installed, services enabled, skel config seeded) -
+# confirmed on real hardware: run that early, one migration looked for a
+# sleep service that doesn't exist until later steps set it up, and another
+# installed quickshell-git from AUR because it couldn't see that quickshell
+# (pacman.txt) was already slated for install_packages. That AUR quickshell-git
+# then conflicted with the real quickshell install and had to be removed by
+# hand (pacman -Rdd quickshell-git) to recover. Runs last instead, after
+# restore_dotfiles, so migrations see the same state the official installer
+# would.
 run_omarchy_migrations() {
   log "Running Omarchy migrations"
   omarchy-migrate
@@ -354,6 +366,24 @@ restore_dotfiles() {
   cp -f "$REPO_DIR/config/omarchy/shell.json" ~/.config/omarchy/shell.json
 }
 
+# SUDO_ASKPASS wired via ~/.config/environment.d/ rather than ~/.bashrc -
+# this system launches Hyprland through uwsm (Universal Wayland Session
+# Manager), which reads systemd's environment.d for the whole graphical
+# session, so it's inherited by every terminal and process under it
+# (including a non-interactive agent shell). ~/.bashrc explicitly returns
+# early for non-interactive shells (`[[ $- != *i* ]] && return`), so it
+# wouldn't reach those. Lets `sudo -A` pop a GUI password prompt from
+# contexts with no terminal to prompt in.
+setup_sudo_askpass() {
+  log "Installing GUI sudo askpass helper"
+  mkdir -p ~/.local/bin
+  cp -f "$REPO_DIR/config/askpass.sh" ~/.local/bin/askpass.sh
+  chmod +x ~/.local/bin/askpass.sh
+
+  mkdir -p ~/.config/environment.d
+  printf 'SUDO_ASKPASS=%s/.local/bin/askpass.sh\n' "$HOME" >~/.config/environment.d/askpass.conf
+}
+
 # Queried at runtime instead of committed to the repo - this repo is public,
 # and there's no reason for a name/email to sit in public git history when
 # two prompts do the job.
@@ -371,7 +401,6 @@ setup_git_identity() {
 main() {
   detect_os
   install_omarchy
-  run_omarchy_migrations
   install_paru
   install_packages
   enable_networkmanager
@@ -382,13 +411,16 @@ main() {
   setup_libvirt
   setup_ufw
   setup_flatpak
+  setup_sudo_askpass
   setup_git_identity
   maybe_setup_claude_backup_hook
   restore_dotfiles
+  run_omarchy_migrations
 
   log "Done. Remaining manual steps:"
   echo "  - Review makepkg.conf's BUILDENV to confirm ccache is actually enabled"
   echo "  - Log out/in (or reboot) for the kvm/libvirt group membership to take effect"
+  echo "  - Log out/in (or reboot) for SUDO_ASKPASS (environment.d) to take effect"
 }
 
 main "$@"

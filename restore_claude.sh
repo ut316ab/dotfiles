@@ -22,6 +22,19 @@ fi
 
 mkdir -p ~/.claude
 cp -r "$BACKUP_DIR/projects" ~/.claude/
-cp "$BACKUP_DIR/settings.json" ~/.claude/settings.json
+
+# The backed-up settings.json can carry a hooks.SessionEnd path baked in from
+# whatever machine/checkout last ran backup_claude.sh - restoring it verbatim
+# can clobber a correct, freshly-computed path that resume.sh's
+# setup_claude_backup_hook already wrote for THIS machine, regardless of
+# which script happened to run first (found in practice: the backup carried
+# a stale ~/Work/dotfiles-resume path, overwriting the correct ~/dotfiles
+# one resume.sh had just set). Deep-merge onto whatever's already at
+# ~/.claude/settings.json instead of overwriting outright, so an existing
+# hooks.SessionEnd always wins over the backup's.
+[[ -f ~/.claude/settings.json ]] || echo '{}' >~/.claude/settings.json
+tmp="$(mktemp)"
+jq -s '.[1] * .[0]' ~/.claude/settings.json "$BACKUP_DIR/settings.json" >"$tmp"
+mv "$tmp" ~/.claude/settings.json
 
 echo "Restored Claude history and settings from $BACKUP_DIR"
