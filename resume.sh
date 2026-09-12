@@ -94,12 +94,19 @@ install_paru() {
 # a real fresh CachyOS VM with no desktop environment) - installing
 # pipewire-jack standalone then hits the same conflict from the other
 # direction, and --noconfirm answers pacman's "Remove jack2?" prompt with its
-# default of N, aborting the whole transaction. Removing jack2 first (only if
-# actually present) avoids that regardless of which OS's base image it came from.
+# default of N, aborting the whole transaction. A plain `pacman -R jack2` then
+# fails too: ffmpeg, fluidsynth, portaudio, and vlc-plugin-jack all depend on
+# it, and pacman only checks currently-installed packages during a standalone
+# removal, so it can't see that the very next command reinstalls an
+# ABI-compatible provider. Confirmed pipewire-jack provides the exact same
+# virtual packages/sonames jack2 does (jack, libjack.so=0-64,
+# libjacknet.so=0-64, libjackserver.so=0-64), so skipping the dependency check
+# on removal (-Rdd) is safe here - those dependents are satisfied again the
+# moment the install below completes.
 install_packages() {
   if pacman -Qi jack2 &>/dev/null; then
     log "Removing jack2 (conflicts with pipewire-jack, which this setup uses instead)"
-    sudo pacman -R --noconfirm jack2
+    sudo pacman -Rdd --noconfirm jack2
   fi
 
   log "Installing pipewire-jack first (avoids a jack2 conflict - see comment above)"
