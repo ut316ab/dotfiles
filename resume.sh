@@ -162,6 +162,17 @@ enable_networkmanager() {
   sudo systemctl enable --now NetworkManager
 }
 
+# Same category of bug as enable_networkmanager - sddm is a package in
+# pacman.txt but nothing ever enables it, so a fresh install boots to a
+# plain TTY with no graphical login at all (found testing a real CachyOS
+# VM reboot). Enabled only, not started now (--now would try to take over
+# the display mid-script, disrupting whatever session is actually running
+# resume.sh) - takes effect on the next boot.
+enable_sddm() {
+  log "Enabling SDDM (takes effect next boot)"
+  sudo systemctl enable sddm
+}
+
 # Delegates to Omarchy's own installer instead of us tracking dropbox,
 # dropbox-cli, nautilus-dropbox, libappindicator and python-gpgme ourselves -
 # omarchy-install-service-dropbox installs all of that, enables the
@@ -326,6 +337,7 @@ main() {
   install_paru
   install_packages
   enable_networkmanager
+  enable_sddm
   setup_dropbox
   install_plugins
   setup_libvirt
