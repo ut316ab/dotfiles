@@ -12,6 +12,9 @@
 
 set -euo pipefail
 
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$REPO_DIR/claude_backup_lib.sh"
+
 BACKUP_DIR="$HOME/Dropbox/claudebackup"
 
 if [[ ! -d "$BACKUP_DIR" ]]; then
@@ -29,7 +32,52 @@ mkdir -p ~/.claude
 # handling below) silently reverted several memory files that had been
 # updated more recently than the last successful backup. rsync -au only
 # pulls in what's actually missing or stale locally.
-rsync -au "$BACKUP_DIR/projects/" ~/.claude/projects/
+#
+# memory/*.md is excluded here and handled below with a content-hash check
+# instead of mtime - now that more than one machine shares this Dropbox
+# backup, mtimes aren't reliable (cross-machine clock skew, Dropbox
+# rewriting them on sync) and rsync -au can't tell "remote moved since I
+# last synced" apart from "only I changed this locally" the way a
+# last-known-synced hash can. Session transcripts/tool-results/subagent logs
+# stay on plain rsync -au - they get a fresh UUID per session so they never
+# collide, no hash bookkeeping needed.
+if ! rsync_retry -au --exclude '*/memory/*.md' "$BACKUP_DIR/projects/" ~/.claude/projects/; then
+  echo "restore_claude.sh: rsync failed after retries" >&2
+  cleanup_rsync_temp_files ~/.claude/projects
+  exit 1
+fi
+cleanup_rsync_temp_files ~/.claude/projects
+
+# 3-way check per memory file: local hash, remote hash, and the hash each
+# side last agreed on (see claude_backup_lib.sh). Only pulls when the
+# remote clearly moved and local didn't; never silently picks a side when
+# both changed since the last sync.
+conflicts=()
+while IFS= read -r relpath; do
+  remote="$BACKUP_DIR/$relpath"
+  local="$HOME/.claude/$relpath"
+  remote_hash="$(file_hash "$remote")"
+  local_hash="$(file_hash "$local")"
+  last_hash="$(manifest_get "$relpath")"
+
+  if [[ "$remote_hash" == "$local_hash" ]]; then
+    : # already in sync
+  elif [[ -z "$local_hash" || "$local_hash" == "$last_hash" ]]; then
+    mkdir -p "$(dirname "$local")"
+    cp "$remote" "$local"
+    echo "Pulled newer $relpath from Dropbox"
+  elif [[ "$remote_hash" == "$last_hash" ]]; then
+    : # only changed locally - next backup push will cover it
+    continue
+  else
+    echo "CONFLICT: $relpath changed on both sides since last sync - not overwriting" >&2
+    cp "$remote" "$local.remote-conflict"
+    echo "  remote version saved as $relpath.remote-conflict - merge by hand" >&2
+    conflicts+=("$relpath")
+    continue
+  fi
+  manifest_set "$relpath" "$remote_hash"
+done < <(tracked_files "$BACKUP_DIR")
 
 # The backed-up settings.json can carry a hooks.SessionEnd path baked in from
 # whatever machine/checkout last ran backup_claude.sh - restoring it verbatim
@@ -44,5 +92,10 @@ rsync -au "$BACKUP_DIR/projects/" ~/.claude/projects/
 tmp="$(mktemp)"
 jq -s '.[1] * .[0]' ~/.claude/settings.json "$BACKUP_DIR/settings.json" >"$tmp"
 mv "$tmp" ~/.claude/settings.json
+
+if ((${#conflicts[@]})); then
+  echo "Restored Claude history and settings from $BACKUP_DIR, but ${#conflicts[@]} memory file(s) need manual merge: ${conflicts[*]}" >&2
+  exit 2
+fi
 
 echo "Restored Claude history and settings from $BACKUP_DIR"
