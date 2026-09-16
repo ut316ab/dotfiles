@@ -115,29 +115,29 @@ install_omarchy() {
   esac
 }
 
-# The official installer runs this itself to bring a fresh account up to the
-# current expected state (104 timestamped migration scripts as of writing,
-# tracked via marker files in ~/.local/state/omarchy/migrations). Installing
-# omarchy/omarchy-settings directly on CachyOS bypasses that entirely -
-# found testing a real CachyOS VM reboot: the bar showed "104 pending
-# migrations" and Hyprland failed to start. Idempotent (marker-based), so
-# safe to run unconditionally regardless of which install_omarchy branch ran.
+# NOT run by this script. The official installer runs this itself to bring a
+# fresh account up to the current expected state (104 timestamped migration
+# scripts as of writing, tracked via marker files in
+# ~/.local/state/omarchy/migrations). Installing omarchy/omarchy-settings
+# directly on CachyOS bypasses that entirely - a real CachyOS VM reboot
+# showed the bar reporting "104 pending migrations" with Hyprland failing to
+# start until it's run.
 #
-# Deliberately NOT run right after install_omarchy. Migrations assume the
-# fully-provisioned system the official installer would normally hand off to
-# them (all packages installed, services enabled, skel config seeded) -
-# confirmed on real hardware: run that early, one migration looked for a
-# sleep service that doesn't exist until later steps set it up, and another
-# installed quickshell-git from AUR because it couldn't see that quickshell
-# (pacman.txt) was already slated for install_packages. That AUR quickshell-git
-# then conflicted with the real quickshell install and had to be removed by
-# hand (pacman -Rdd quickshell-git) to recover. Runs last instead, after
-# restore_dotfiles, so migrations see the same state the official installer
-# would.
-run_omarchy_migrations() {
-  log "Running Omarchy migrations"
-  omarchy-migrate
-}
+# Tried running it from resume.sh both early (right after install_omarchy)
+# and last (after restore_dotfiles, so it'd see a fully-provisioned system) -
+# both failed the same way on real hardware: a migration looking for a
+# service that only exists once Hyprland/uwsm has actually started a real
+# session (not something any pre-login script step can create), and along
+# the way it AUR-installs quickshell-git because it can't see that quickshell
+# (pacman.txt) is already slated for install_packages - that then conflicts
+# with the real quickshell install and has to be removed by hand
+# (pacman -Rdd quickshell-git) before resume.sh can be re-run.
+#
+# Confirmed on real hardware (2026-09-16): the pending-migrations state
+# survives fine across the reboot resume.sh already tells you to do for
+# group membership / SUDO_ASKPASS, and running "omarchy migrate" by hand
+# after that first real login just works. So it's a manual post-reboot step
+# instead - see the final log output in main().
 
 install_paru() {
   if command -v paru >/dev/null; then
@@ -415,12 +415,11 @@ main() {
   setup_git_identity
   maybe_setup_claude_backup_hook
   restore_dotfiles
-  run_omarchy_migrations
 
   log "Done. Remaining manual steps:"
   echo "  - Review makepkg.conf's BUILDENV to confirm ccache is actually enabled"
-  echo "  - Log out/in (or reboot) for the kvm/libvirt group membership to take effect"
-  echo "  - Log out/in (or reboot) for SUDO_ASKPASS (environment.d) to take effect"
+  echo "  - Reboot (needed for kvm/libvirt group membership and SUDO_ASKPASS to take effect)"
+  echo "  - After logging back in, run: omarchy migrate"
 }
 
 main "$@"
