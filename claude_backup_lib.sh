@@ -31,12 +31,16 @@ tracked_files() {
 }
 
 file_hash() {
-  [[ -f "$1" ]] && sha256sum "$1" 2>/dev/null | cut -d' ' -f1
+  # Missing file = empty hash, not a failure: callers run under set -e and
+  # a non-zero return here aborts them on the first not-yet-restored file.
+  [[ -f "$1" ]] || return 0
+  sha256sum "$1" 2>/dev/null | cut -d' ' -f1
 }
 
 manifest_get() {
   local relpath="$1"
-  [[ -f "$MANIFEST" ]] && awk -F'\t' -v f="$relpath" '$2==f{print $1; exit}' "$MANIFEST"
+  [[ -f "$MANIFEST" ]] || return 0
+  awk -F'\t' -v f="$relpath" '$2==f{print $1; exit}' "$MANIFEST"
 }
 
 manifest_set() {
