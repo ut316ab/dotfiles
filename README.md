@@ -14,8 +14,9 @@ git clone https://github.com/ut316ab/dotfiles ~/dotfiles
 cd ~/dotfiles && bash resume.sh
 ```
 
-`resume.sh` is interactive by design in two places — it asks about git
-identity and the Claude backup hook, so you can choose what gets resumed.
+`resume.sh` is interactive by design in three places — it asks about git
+identity, the Claude backup hook, and a hardware-specific monitor config,
+so you can choose what gets resumed.
 `ufw enable` runs with `--force`, so its own separate "may disrupt existing
 ssh connections" confirmation (which only appears when it detects SSH) is
 suppressed too — the whole script is safe to run over SSH.
@@ -34,6 +35,9 @@ suppressed too — the whole script is safe to run over SSH.
   wallpaper source, so no wallpaper file is stored in this repo)
 - Restores Hyprland configs (`config/hypr/*.lua`) and the Quickshell
   (omarchy-shell) bar config (`config/omarchy/shell.json`)
+- Optionally (prompted, default no) appends
+  `config/hypr-optional/monitor-aw3225dm.lua` to `monitors.lua`: 180Hz plus
+  fullscreen-only VRR for an Alienware AW3225DM, whose preferred mode is 60Hz
 - Installs and configures Dropbox via Omarchy's own
   `omarchy-install-service-dropbox` (not tracked in `packages/pacman.txt` —
   that script owns `dropbox`, `dropbox-cli`, `nautilus-dropbox`,

@@ -366,6 +366,28 @@ restore_dotfiles() {
   cp -f "$REPO_DIR/config/omarchy/shell.json" ~/.config/omarchy/shell.json
 }
 
+# Hardware-specific, so it's a prompt rather than part of config/hypr/*.lua:
+# an Alienware AW3225DM advertises 60Hz as its preferred mode, which is what
+# monitors.lua's generic "preferred" rule picks, leaving a 180Hz panel at 60.
+# Lives in config/hypr-optional/ so restore_dotfiles' *.lua glob doesn't copy
+# it unconditionally. Appended to monitors.lua (it uses that file's
+# omarchy_monitor_scale local), guarded by its marker line so re-runs don't
+# stack copies. Must run after restore_dotfiles, which overwrites monitors.lua.
+maybe_setup_monitor_180hz_vrr() {
+  local ans snippet="$REPO_DIR/config/hypr-optional/monitor-aw3225dm.lua"
+  read -rp "Set Alienware AW3225DM monitor to 180Hz with fullscreen VRR (hardware-specific)? [y/N] " ans || ans="n"
+  if [[ ! "$ans" =~ ^[Yy]$ ]]; then
+    log "Skipping AW3225DM 180Hz/VRR monitor config"
+    return
+  fi
+  if grep -qF -- "$(grep -m1 '^-- resume.sh:' "$snippet")" ~/.config/hypr/monitors.lua; then
+    log "AW3225DM 180Hz/VRR monitor config already present"
+    return
+  fi
+  log "Adding AW3225DM 180Hz/VRR monitor config to ~/.config/hypr/monitors.lua"
+  cat "$snippet" >>~/.config/hypr/monitors.lua
+}
+
 # SUDO_ASKPASS wired via ~/.config/environment.d/ rather than ~/.bashrc -
 # this system launches Hyprland through uwsm (Universal Wayland Session
 # Manager), which reads systemd's environment.d for the whole graphical
@@ -415,6 +437,7 @@ main() {
   setup_git_identity
   maybe_setup_claude_backup_hook
   restore_dotfiles
+  maybe_setup_monitor_180hz_vrr
 
   log "Done. Remaining manual steps:"
   echo "  - Review makepkg.conf's BUILDENV to confirm ccache is actually enabled"
