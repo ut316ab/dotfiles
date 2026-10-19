@@ -28,6 +28,21 @@ cleanup_rsync_temp_files "$BACKUP_DIR/projects"
 
 cp "$HOME/.claude/settings.json" "$BACKUP_DIR/settings.json"
 
+# Project folders (see WORK_PROJECTS in claude_backup_lib.sh). No --delete:
+# an empty or half-restored folder on a fresh install must never wipe the
+# backup copy. Files deleted locally just stay in the backup, which is
+# harmless. A failure here is reported but doesn't stop the memory manifest
+# update below.
+for name in "${WORK_PROJECTS[@]}"; do
+  src="$HOME/Work/$name"
+  [[ -d "$src" ]] || continue
+  mkdir -p "$BACKUP_DIR/work/$name"
+  if ! rsync_retry -a "$src/" "$BACKUP_DIR/work/$name/"; then
+    echo "backup_claude.sh: rsync of $src failed after retries" >&2
+  fi
+  cleanup_rsync_temp_files "$BACKUP_DIR/work/$name"
+done
+
 # We just pushed these files to Dropbox, so they're now the "last known
 # synced" state - record it for restore_claude.sh's 3-way conflict check
 # (see claude_backup_lib.sh) on this or any other machine sharing this backup.

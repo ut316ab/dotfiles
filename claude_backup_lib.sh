@@ -23,6 +23,13 @@
 
 MANIFEST="$HOME/.claude/.backup_sync_manifest"
 
+# Project folders under ~/Work that live only on this disk (no git remote,
+# or holding files that can't go on GitHub, like game data and ROMs).
+# backup_claude.sh copies each into $BACKUP_DIR/work/<name>, and
+# restore_claude.sh copies them back. Skipped on a machine that doesn't
+# have the folder.
+WORK_PROJECTS=(wizardry7-amiga)
+
 # Relpaths (under either $BACKUP_DIR or ~/.claude) of files that can
 # actually collide between machines. $1 = tree root (BACKUP_DIR or ~/.claude).
 tracked_files() {
@@ -75,4 +82,7 @@ cleanup_rsync_temp_files() {
     base="$(basename "$f")"
     [[ "$base" =~ ^\..+\.[A-Za-z0-9]{6}$ ]] && rm -f -- "$f"
   done < <(find "$dir" -type f -name '.*' -print0 2>/dev/null)
+  # The loop's status is its last [[ ]] test, which is false for any dotfile
+  # that isn't an rsync temp file - callers run under set -e.
+  return 0
 }

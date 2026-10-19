@@ -93,6 +93,20 @@ tmp="$(mktemp)"
 jq -s '.[1] * .[0]' ~/.claude/settings.json "$BACKUP_DIR/settings.json" >"$tmp"
 mv "$tmp" ~/.claude/settings.json
 
+# Project folders (see WORK_PROJECTS in claude_backup_lib.sh). -u, so a
+# file that's newer locally is never overwritten.
+for name in "${WORK_PROJECTS[@]}"; do
+  src="$BACKUP_DIR/work/$name"
+  [[ -d "$src" ]] || continue
+  mkdir -p "$HOME/Work/$name"
+  if rsync_retry -au "$src/" "$HOME/Work/$name/"; then
+    echo "Restored ~/Work/$name from Dropbox"
+  else
+    echo "restore_claude.sh: rsync of ~/Work/$name failed after retries" >&2
+  fi
+  cleanup_rsync_temp_files "$HOME/Work/$name"
+done
+
 if ((${#conflicts[@]})); then
   echo "Restored Claude history and settings from $BACKUP_DIR, but ${#conflicts[@]} memory file(s) need manual merge: ${conflicts[*]}" >&2
   exit 2

@@ -81,3 +81,9 @@ Deliberately not just synced as part of `settings.json` from
 `~/Dropbox/claudebackup`: that path is frozen at backup time, and would be
 wrong on a fresh machine whose clone doesn't happen to live at the exact
 same path as wherever it was last backed up from.
+
+The same scripts also back up project folders under `~/Work` that exist
+only on this disk (listed in `WORK_PROJECTS` in `claude_backup_lib.sh`) to
+`~/Dropbox/claudebackup/work/`, and `restore_claude.sh` copies them back.
+These hold things that can't go in a public repo, like game data and ROMs.
+The backup never deletes files from the Dropbox copy.
