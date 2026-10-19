@@ -43,6 +43,34 @@ for name in "${WORK_PROJECTS[@]}"; do
   cleanup_rsync_temp_files "$BACKUP_DIR/work/$name"
 done
 
+# Wizardry 8 save editor (see W8_EDITOR_SRC in claude_backup_lib.sh). The
+# patch is only replaced when the clone still has local changes, so a fresh
+# upstream checkout can't overwrite the saved fixes with an empty file.
+w8_backup="$BACKUP_DIR/wizardry8-editor"
+if [[ -d "$W8_EDITOR_SRC/.git" ]] && ! git -C "$W8_EDITOR_SRC" diff --quiet; then
+  mkdir -p "$w8_backup"
+  patch_tmp="$(mktemp)"
+  {
+    echo "Local fixes to anonidiot/Wizardry8Editor, made against commit $(git -C "$W8_EDITOR_SRC" rev-parse --short HEAD)."
+    echo "Apply in a fresh clone with: git apply local-fixes.patch"
+    echo
+    git -C "$W8_EDITOR_SRC" diff
+  } >"$patch_tmp"
+  mv "$patch_tmp" "$w8_backup/local-fixes.patch"
+fi
+if [[ -d "$W8_GAME_DIR/tools" ]]; then
+  mkdir -p "$w8_backup/tools"
+  if ! rsync_retry -a --exclude=__pycache__ "$W8_GAME_DIR/tools/" "$w8_backup/tools/"; then
+    echo "backup_claude.sh: rsync of $W8_GAME_DIR/tools failed after retries" >&2
+  fi
+  cleanup_rsync_temp_files "$w8_backup/tools"
+  for f in "${W8_LAUNCHERS[@]}"; do
+    if [[ -f "$W8_GAME_DIR/$f" ]]; then
+      cp -p "$W8_GAME_DIR/$f" "$w8_backup/$f"
+    fi
+  done
+fi
+
 # We just pushed these files to Dropbox, so they're now the "last known
 # synced" state - record it for restore_claude.sh's 3-way conflict check
 # (see claude_backup_lib.sh) on this or any other machine sharing this backup.

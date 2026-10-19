@@ -107,6 +107,25 @@ for name in "${WORK_PROJECTS[@]}"; do
   cleanup_rsync_temp_files "$HOME/Work/$name"
 done
 
+# Wizardry 8 save editor scripts and launchers go back into the game folder,
+# only if the game is installed (the launchers point into it). -u, as above.
+# The source patch isn't applied here: it needs a fresh clone and a rebuild.
+w8_backup="$BACKUP_DIR/wizardry8-editor"
+if [[ -d "$w8_backup/tools" && -d "$W8_GAME_DIR" ]]; then
+  mkdir -p "$W8_GAME_DIR/tools"
+  if rsync_retry -au "$w8_backup/tools/" "$W8_GAME_DIR/tools/"; then
+    for f in "${W8_LAUNCHERS[@]}"; do
+      if [[ -f "$w8_backup/$f" ]]; then
+        rsync -au "$w8_backup/$f" "$W8_GAME_DIR/$f"
+      fi
+    done
+    echo "Restored Wizardry 8 editor tools to $W8_GAME_DIR (source fixes: $w8_backup/local-fixes.patch)"
+  else
+    echo "restore_claude.sh: rsync of Wizardry 8 editor tools failed after retries" >&2
+  fi
+  cleanup_rsync_temp_files "$W8_GAME_DIR/tools"
+fi
+
 if ((${#conflicts[@]})); then
   echo "Restored Claude history and settings from $BACKUP_DIR, but ${#conflicts[@]} memory file(s) need manual merge: ${conflicts[*]}" >&2
   exit 2

@@ -30,6 +30,15 @@ MANIFEST="$HOME/.claude/.backup_sync_manifest"
 # have the folder.
 WORK_PROJECTS=(wizardry7-amiga)
 
+# Wizardry 8 save editor: ~/Work/Wizardry8Editor is a clone of a public repo
+# (anonidiot/Wizardry8Editor) with two uncommitted local fixes, and the
+# helper scripts/launchers live in the game folder. The clone itself (675 MB,
+# mostly build output) isn't worth copying - only the fixes as a patch, plus
+# the scripts and launchers, go to $BACKUP_DIR/wizardry8-editor.
+W8_EDITOR_SRC="$HOME/Work/Wizardry8Editor"
+W8_GAME_DIR="$HOME/Games/wizardry-8"
+W8_LAUNCHERS=(editor.sh editor-wine.sh)
+
 # Relpaths (under either $BACKUP_DIR or ~/.claude) of files that can
 # actually collide between machines. $1 = tree root (BACKUP_DIR or ~/.claude).
 tracked_files() {
