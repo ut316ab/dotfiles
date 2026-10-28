@@ -244,12 +244,22 @@ setup_dropbox() {
 # has ever been started. The plugin's files still get installed correctly
 # either way (the shell picks it up on its next start/rescan), so this
 # failure isn't fatal - don't let `set -e` kill the rest of the script over it.
+#
+# An optional third column in plugins.txt names a branch to switch the
+# plugin's clone to afterwards (omarchy plugin add has no branch option) -
+# used to run a fork's patched branch until fixes are merged upstream.
 install_plugins() {
   log "Restoring Omarchy plugins"
-  while read -r id url; do
+  while read -r id url branch; do
     [[ -z $id || $id == \#* ]] && continue
     if ! omarchy plugin add "$url" --enable --yes; then
       log "Plugin $id: files installed, but couldn't hot-register (omarchy-shell not running yet - fine on a fresh install)"
+    fi
+    if [[ -n $branch ]]; then
+      local dir="$HOME/.config/omarchy/plugins/$id"
+      log "Plugin $id: switching to branch $branch"
+      git -C "$dir" fetch origin "$branch"
+      git -C "$dir" checkout -B "$branch" "origin/$branch"
     fi
   done <"$REPO_DIR/plugins.txt"
 }
