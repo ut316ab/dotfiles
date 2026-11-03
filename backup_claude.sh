@@ -71,6 +71,19 @@ if [[ -d "$W8_GAME_DIR/tools" ]]; then
   done
 fi
 
+# Skills (see CLAUDE_SKILLS in claude_backup_lib.sh). -L copies the files a
+# symlinked skill points at, so the backup still works once that package is
+# gone. Skipped if the skill is missing or its link is broken here.
+for name in "${CLAUDE_SKILLS[@]}"; do
+  src="$HOME/.claude/skills/$name"
+  [[ -d "$src" ]] || continue
+  mkdir -p "$BACKUP_DIR/skills/$name"
+  if ! rsync_retry -aL "$src/" "$BACKUP_DIR/skills/$name/"; then
+    echo "backup_claude.sh: rsync of skill $name failed after retries" >&2
+  fi
+  cleanup_rsync_temp_files "$BACKUP_DIR/skills/$name"
+done
+
 # We just pushed these files to Dropbox, so they're now the "last known
 # synced" state - record it for restore_claude.sh's 3-way conflict check
 # (see claude_backup_lib.sh) on this or any other machine sharing this backup.

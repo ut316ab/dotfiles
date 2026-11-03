@@ -107,6 +107,25 @@ for name in "${WORK_PROJECTS[@]}"; do
   cleanup_rsync_temp_files "$HOME/Work/$name"
 done
 
+# Skills (see CLAUDE_SKILLS in claude_backup_lib.sh). A skill that already
+# works here is left alone - it may be a symlink into a package, and copying
+# through it would write into a root-owned folder. A broken link (the package
+# was removed) is replaced with the backed-up copy.
+for name in "${CLAUDE_SKILLS[@]}"; do
+  src="$BACKUP_DIR/skills/$name"
+  dest="$HOME/.claude/skills/$name"
+  [[ -d "$src" ]] || continue
+  [[ -d "$dest" ]] && continue
+  [[ -L "$dest" ]] && rm -f -- "$dest"
+  mkdir -p "$dest"
+  if rsync_retry -a "$src/" "$dest/"; then
+    echo "Restored Claude skill $name from Dropbox"
+  else
+    echo "restore_claude.sh: rsync of skill $name failed after retries" >&2
+  fi
+  cleanup_rsync_temp_files "$dest"
+done
+
 # Wizardry 8 save editor scripts and launchers go back into the game folder,
 # only if the game is installed (the launchers point into it). -u, as above.
 # The source patch isn't applied here: it needs a fresh clone and a rebuild.

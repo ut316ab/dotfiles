@@ -39,6 +39,13 @@ W8_EDITOR_SRC="$HOME/Work/Wizardry8Editor"
 W8_GAME_DIR="$HOME/Games/wizardry-8"
 W8_LAUNCHERS=(editor.sh editor-wine.sh)
 
+# Claude Code skills in ~/.claude/skills worth keeping across reinstalls.
+# Some are only symlinks into a package (diagnose-crash points into
+# /usr/share/omarchy), so backup_claude.sh copies the real files (rsync -L)
+# to $BACKUP_DIR/skills/<name>, and restore_claude.sh puts them back on a
+# machine where the skill is missing or its link is broken.
+CLAUDE_SKILLS=(diagnose-crash)
+
 # Relpaths (under either $BACKUP_DIR or ~/.claude) of files that can
 # actually collide between machines. $1 = tree root (BACKUP_DIR or ~/.claude).
 tracked_files() {
