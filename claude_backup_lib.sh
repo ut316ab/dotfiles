@@ -102,3 +102,46 @@ cleanup_rsync_temp_files() {
   # that isn't an rsync temp file - callers run under set -e.
   return 0
 }
+
+# Claude Code files memory under ~/.claude/projects/<encoded path>/memory,
+# where the encoded path is the working folder with every non-alphanumeric
+# character turned into "-" (/home/darryl/Work -> -home-darryl-Work). A
+# restore onto an account with a different username (found 2026-11-04:
+# backup from "darryl", restored as "lizzie") leaves all memory under the old
+# user's folders, where Claude never looks. For each old-user folder with
+# real memory (another user under the same parent folder as $HOME), link
+# the matching folder for this $HOME to it, so both share one set of files.
+# Never touches a folder that already has memory of its own.
+# backup_claude.sh skips links (--no-links), so these never reach Dropbox;
+# each restore makes them again. Assumes the old username has no "-" in it.
+link_foreign_memory() {
+  local projects="$HOME/.claude/projects" me parent src name old_prefix suffix dest
+  me="$(printf '%s' "$HOME" | sed 's/[^A-Za-z0-9]/-/g')"
+  parent="$(dirname "$HOME" | sed 's/[^A-Za-z0-9]/-/g')"
+  for src in "$projects"/*/memory; do
+    [[ -d "$src" && ! -L "$src" ]] || continue
+    [[ -n "$(ls -A "$src")" ]] || continue
+    name="$(basename "$(dirname "$src")")"
+    [[ "$name" == "$me" || "$name" == "$me"-* ]] && continue
+    [[ "$name" =~ ^("$parent"-[A-Za-z0-9_]+)(-.*)?$ ]] || continue
+    old_prefix="${BASH_REMATCH[1]}"
+    suffix="${BASH_REMATCH[2]:-}"
+    dest="$projects/$me$suffix/memory"
+    if [[ -L "$dest" ]]; then
+      [[ "$(readlink "$dest")" == "../$name/memory" ]] ||
+        echo "Not linking $name memory: $dest already links to $(readlink "$dest")" >&2
+      continue
+    fi
+    if [[ -d "$dest" ]]; then
+      if [[ -n "$(ls -A "$dest")" ]]; then
+        echo "Not linking $name memory: $dest already has its own files" >&2
+        continue
+      fi
+      rmdir -- "$dest"
+    fi
+    mkdir -p -- "$(dirname "$dest")"
+    ln -s -- "../$name/memory" "$dest"
+    echo "Linked memory from ${old_prefix#"$parent"-}'s $name to this account"
+  done
+  return 0
+}

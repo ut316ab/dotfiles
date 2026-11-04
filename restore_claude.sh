@@ -79,6 +79,9 @@ while IFS= read -r relpath; do
   manifest_set "$relpath" "$remote_hash"
 done < <(tracked_files "$BACKUP_DIR")
 
+# Backup made under a different username: point this account at its memory.
+link_foreign_memory
+
 # The backed-up settings.json can carry a hooks.SessionEnd path baked in from
 # whatever machine/checkout last ran backup_claude.sh - restoring it verbatim
 # can clobber a correct, freshly-computed path that resume.sh's

@@ -19,7 +19,9 @@ fi
 
 mkdir -p "$BACKUP_DIR/projects"
 
-if ! rsync_retry -a "$HOME/.claude/projects/" "$BACKUP_DIR/projects/"; then
+# --no-links: memory links made by restore_claude.sh (link_foreign_memory)
+# stay on this machine; restore makes them again elsewhere.
+if ! rsync_retry -a --no-links "$HOME/.claude/projects/" "$BACKUP_DIR/projects/"; then
   echo "backup_claude.sh: rsync failed after retries, leaving Dropbox backup as-is" >&2
   cleanup_rsync_temp_files "$BACKUP_DIR/projects"
   exit 1
