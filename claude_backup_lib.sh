@@ -28,7 +28,7 @@ MANIFEST="$HOME/.claude/.backup_sync_manifest"
 # backup_claude.sh copies each into $BACKUP_DIR/work/<name>, and
 # restore_claude.sh copies them back. Skipped on a machine that doesn't
 # have the folder.
-WORK_PROJECTS=(wizardry7-amiga)
+WORK_PROJECTS=(wizardry7-amiga rssreader)
 
 # Wizardry 8 save editor: ~/Work/Wizardry8Editor is a clone of a public repo
 # (anonidiot/Wizardry8Editor) with two uncommitted local fixes, and the
