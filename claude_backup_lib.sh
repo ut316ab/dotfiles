@@ -50,7 +50,9 @@ CLAUDE_SKILLS=(diagnose-crash)
 # actually collide between machines. $1 = tree root (BACKUP_DIR or ~/.claude).
 tracked_files() {
   local base="$1"
-  find "$base/projects" -path '*/memory/*.md' -printf 'projects/%P\n' 2>/dev/null | sort
+  # Portable form: no GNU find -printf (FreeBSD's find rejects "%P" and the
+  # 2>/dev/null used to hide that, returning an empty list).
+  (cd "$base" 2>/dev/null && find projects -path '*/memory/*.md' 2>/dev/null) | sort
 }
 
 file_hash() {
