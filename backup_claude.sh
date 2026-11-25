@@ -17,6 +17,26 @@ if [[ ! -d "$HOME/Dropbox" ]]; then
   exit 0
 fi
 
+# FreeBSD: the rclone upload further down can take a while, and Claude Code
+# cancels a SessionEnd hook that runs too long (seen 2026-11-25: "Hook
+# cancelled" mid-upload). So hand the whole run to daemon(8) and return at
+# once. lockf(1) makes overlapping runs (sessions closed in quick
+# succession) wait their turn instead of running side by side. daemon
+# changes to /, hence the absolute path to this script.
+log="$HOME/.cache/claude_backup.log"
+if [[ "$(uname -s)" == "FreeBSD" && -z "${CLAUDE_BACKUP_DETACHED:-}" ]]; then
+  mkdir -p "$(dirname "$log")"
+  CLAUDE_BACKUP_DETACHED=1 daemon -f \
+    lockf -k "$HOME/.cache/claude_backup.lock" \
+    bash "$REPO_DIR/$(basename "${BASH_SOURCE[0]}")"
+  exit 0
+fi
+# The detached run has no terminal: send its errors to the log.
+if [[ -n "${CLAUDE_BACKUP_DETACHED:-}" ]]; then
+  exec 2>>"$log"
+  echo "$(date '+%F %T') backup started" >>"$log"
+fi
+
 mkdir -p "$BACKUP_DIR/projects"
 
 # --no-links: memory links made by restore_claude.sh (link_foreign_memory)
@@ -91,13 +111,16 @@ done
 # here, before the manifest below claims these files are synced.
 #   copy, never sync: copy never deletes anything in Dropbox.
 #   --update: a file another machine pushed more recently is left alone.
+#   --checksum: compare by content, not timestamp. Dropbox can't change a
+#     file's timestamp alone, so files that only got a new one (restore
+#     copies memory with plain cp) would otherwise all be uploaded again,
+#     which got rate-limited by Dropbox on 2026-11-25.
 # The SessionEnd hook hides this script's output, so results go to a log.
 # If the upload fails the manifest is left untouched, so it never records a
 # state Dropbox doesn't actually have.
 if [[ "$(uname -s)" == "FreeBSD" ]]; then
-  log="$HOME/.cache/claude_backup.log"
   mkdir -p "$(dirname "$log")"
-  if rclone copy --update "$BACKUP_DIR" "${RCLONE_DROPBOX_REMOTE}claudebackup" >>"$log" 2>&1; then
+  if rclone copy --update --checksum "$BACKUP_DIR" "${RCLONE_DROPBOX_REMOTE}claudebackup" >>"$log" 2>&1; then
     echo "$(date '+%F %T') uploaded $BACKUP_DIR to ${RCLONE_DROPBOX_REMOTE}claudebackup" >>"$log"
   else
     echo "$(date '+%F %T') rclone upload FAILED - manifest not updated" >>"$log"
