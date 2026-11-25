@@ -1,7 +1,9 @@
 # Shared helpers for backup_claude.sh / restore_claude.sh.
 #
 # Two problems these solve, both specific to sharing one Dropbox backup
-# across multiple machines (currently: whitehole and a WSL/Arch instance):
+# across multiple machines (currently: whitehole, a WSL/Arch instance, and
+# the freebsd16-current VM, which reaches Dropbox through rclone instead of
+# the Dropbox client; see the FreeBSD upload in backup_claude.sh):
 #
 # 1. backup_claude.sh's push is a plain rsync -a: whichever machine runs it
 #    last wins, with no way to tell "remote moved since I last synced" apart
@@ -22,6 +24,9 @@
 # Source this file; it defines functions/vars only, no side effects.
 
 MANIFEST="$HOME/.claude/.backup_sync_manifest"
+
+# rclone remote for Dropbox on machines without the Dropbox client (FreeBSD).
+RCLONE_DROPBOX_REMOTE="Dropbox:"
 
 # Project folders under ~/Work that live only on this disk (no git remote,
 # or holding files that can't go on GitHub, like game data and ROMs).

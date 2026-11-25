@@ -86,6 +86,26 @@ for name in "${CLAUDE_SKILLS[@]}"; do
   cleanup_rsync_temp_files "$BACKUP_DIR/skills/$name"
 done
 
+# FreeBSD has no Dropbox client: ~/Dropbox there is a local copy kept with
+# rclone, so nothing above has reached Dropbox yet. Upload the backup folder
+# here, before the manifest below claims these files are synced.
+#   copy, never sync: copy never deletes anything in Dropbox.
+#   --update: a file another machine pushed more recently is left alone.
+# The SessionEnd hook hides this script's output, so results go to a log.
+# If the upload fails the manifest is left untouched, so it never records a
+# state Dropbox doesn't actually have.
+if [[ "$(uname -s)" == "FreeBSD" ]]; then
+  log="$HOME/.cache/claude_backup.log"
+  mkdir -p "$(dirname "$log")"
+  if rclone copy --update "$BACKUP_DIR" "${RCLONE_DROPBOX_REMOTE}claudebackup" >>"$log" 2>&1; then
+    echo "$(date '+%F %T') uploaded $BACKUP_DIR to ${RCLONE_DROPBOX_REMOTE}claudebackup" >>"$log"
+  else
+    echo "$(date '+%F %T') rclone upload FAILED - manifest not updated" >>"$log"
+    echo "backup_claude.sh: rclone upload failed, see $log" >&2
+    exit 1
+  fi
+fi
+
 # We just pushed these files to Dropbox, so they're now the "last known
 # synced" state - record it for restore_claude.sh's 3-way conflict check
 # (see claude_backup_lib.sh) on this or any other machine sharing this backup.
