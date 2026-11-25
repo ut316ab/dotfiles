@@ -1,0 +1,13 @@
+{
+    "KPlugin": {
+        "Id": "hyprfollow",
+        "Name": "Hyprland-style move & follow",
+        "Description": "Move the active window to desktop N (or next/previous) and switch there with it, like Hyprland's movetoworkspace. Keys set in System Settings > Shortcuts > KWin.",
+        "Authors": [{ "Name": "darryl (with Claude)" }],
+        "License": "MIT",
+        "Version": "1.0"
+    },
+    "KPackageStructure": "KWin/Script",
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}

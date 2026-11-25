@@ -1,0 +1,16 @@
+[Unit]
+Description=Back up libvirt config whenever it changes (no polling)
+
+[Path]
+# VM definitions, their autostart links, networks
+PathChanged=/etc/libvirt/qemu
+PathChanged=/etc/libvirt/qemu/autostart
+PathChanged=/etc/libvirt/qemu/networks
+PathChanged=/etc/libvirt/qemu/networks/autostart
+# Per-VM UEFI variable files
+PathChanged=/var/lib/libvirt/qemu/nvram
+PathChanged=/var/lib/libvirt/qemu/varstore
+Unit=libvirt-config-backup.service
+
+[Install]
+WantedBy=multi-user.target

@@ -1,12 +1,13 @@
 # dotfiles
 
-Restores this Omarchy/Arch/CachyOS setup on a fresh install. Supports Omarchy,
-vanilla Arch, and CachyOS — not EndeavourOS or Garuda.
+My CachyOS + KDE Plasma setup, and the way back to it: if I reinstall Linux
+(for example after trying FreeBSD on this machine), `resume.sh` puts my
+programs and settings back on a fresh CachyOS (or Arch) install with KDE.
 
-## Bootstrap on a genuinely fresh machine
+This repo is public only so a fresh install can fetch it with nothing but
+`git`, with no GitHub login needed. It's for my own use.
 
-This repo is **public**, specifically so a fresh install needs zero GitHub
-auth to get it — no token, no browser, no second device. Just:
+## Restoring
 
 ```bash
 sudo pacman -S --needed git
@@ -14,76 +15,72 @@ git clone https://github.com/ut316ab/dotfiles ~/dotfiles
 cd ~/dotfiles && bash resume.sh
 ```
 
-`resume.sh` is interactive by design in three places — it asks about git
-identity, the Claude backup hook, and a hardware-specific monitor config,
-so you can choose what gets resumed.
-`ufw enable` runs with `--force`, so its own separate "may disrupt existing
-ssh connections" confirmation (which only appears when it detects SSH) is
-suppressed too — the whole script is safe to run over SSH.
+Run it as your normal user, from a terminal inside the KDE session. It asks
+for the sudo password once, and asks a few questions along the way: whether to
+keep an existing git identity (or enter `user.name` / `user.email`), and
+whether to set up the Claude backup hook. Running it again is safe. Config
+files it would overwrite are kept with a `.before-resume-<date>` suffix.
+
+When it finishes, it lists what's left to do by hand:
+
+1. Sign in to Dropbox in the browser and let it sync.
+2. Run `bash restore_claude.sh` (see below).
+3. Reboot.
 
 ## What resume.sh does
 
-- Detects the OS and bootstraps Omarchy (official installer on vanilla Arch;
-  a direct repo+keyring bootstrap on CachyOS, since there's no official
-  Omarchy support there — see the `bootstrap_cachyos_omarchy_repo` comment
-  in the script for why that's safe on this machine specifically)
-- Installs `packages/pacman.txt` and `packages/aur.txt` (curated, not raw
-  `pacman -Qqe` output — gaming, VirtualBox, and one-off session installs
-  were deliberately excluded)
-- Restores `plugins.txt` (Omarchy third-party plugins, including the
-  `dorneles.omapod` APOD bar widget — its 1-click wallpaper action is the
-  wallpaper source, so no wallpaper file is stored in this repo)
-- Restores Hyprland configs (`config/hypr/*.lua`) and the Quickshell
-  (omarchy-shell) bar config (`config/omarchy/shell.json`)
-- Optionally (prompted, default no) appends
-  `config/hypr-optional/monitor-aw3225dm.lua` to `monitors.lua`: 180Hz plus
-  fullscreen-only VRR for an Alienware AW3225DM, whose preferred mode is 60Hz
-- Installs and configures Dropbox via Omarchy's own
-  `omarchy-install-service-dropbox` (not tracked in `packages/pacman.txt` —
-  that script owns `dropbox`, `dropbox-cli`, `nautilus-dropbox`,
-  `libappindicator`, and `python-gpgme` itself), plus `dropbox-cli
-  autostart y` since Omarchy's script doesn't set that up either
-- Replicates libvirt/UFW/Flathub config that installing packages alone
-  doesn't set up
+- **Packages:** `packages/pacman.txt` (repo) and `packages/aur.txt` (AUR,
+  through paru). A reviewed list of what I actually use; the base system and
+  KDE come with the CachyOS installer and aren't listed.
+- **System:** SSH server, libvirt/QEMU (VMs run as my user), a unit that
+  backs up VM definitions to `/mnt/storage` whenever they change, an
+  ananicy-cpp override so VMs run at normal priority, the firewall (only KDE
+  Connect and SSH allowed in), Flathub, the SDDM login screen.
+- **My configs:** everything under `config/home/` is copied into `~`: KDE
+  Plasma settings (look, window rules, shortcuts, panel, monitor), kitty,
+  zsh, rofi (Meta+D launcher), fastfetch, btop, micro, MangoHud, my scripts
+  in `~/.local/bin` and their launchers, and the hyprfollow KWin script.
+  System files are in `config/etc/`.
+- **zsh:** Oh My Zsh with zsh-autosuggestions and zsh-syntax-highlighting,
+  the agnosterzak theme, and zsh as the login shell (CachyOS defaults to fish).
+- **Rust:** rustup with the stable toolchain and rust-analyzer.
+- **LazyVim:** the official starter, with language support for Python, C/C++,
+  Go, Rust, Lua, Bash, JSON, YAML, TOML and Markdown; plugins and language
+  servers are installed during the run.
+- **Dropbox:** autostart, and it opens the sign-in if run inside KDE.
 
-## What it doesn't do yet
+## Things fetched from their authors, not stored here
 
-Git identity is queried at runtime instead (see `setup_git_identity`). Other
-dotfiles (`btop`, `fcitx5`, Dropbox autostart, etc.) aren't captured yet —
-out of scope for now, restricted to Hyprland + the bar config.
+Oh My Zsh and its plugins, the
+[agnosterzak](https://github.com/zakaziko99/agnosterzak-ohmyzsh-theme) theme,
+the [Catppuccin](https://github.com/catppuccin) themes for btop and micro,
+LazyVim, and Krohnkite (from the AUR) are all downloaded from their own
+sources during the restore. They belong to their authors, so they aren't
+copied into this repo.
 
 ## Claude Code history
 
-Not restored by `resume.sh` at all — this repo is public, and Claude
-conversation history/memory isn't something that belongs in public git
-history. It's backed up to Dropbox instead (`~/Dropbox/claudebackup`).
+Not restored by `resume.sh`, and not stored in this repo: conversation
+history and memory don't belong in a public repo. They're backed up to
+Dropbox (`~/Dropbox/claudebackup`) instead.
 
-Once Dropbox is signed in and has finished syncing on the new machine, run:
+- `backup_claude.sh` runs automatically at the end of every Claude Code
+  session (a `SessionEnd` hook, which `resume.sh` offers to set up). It copies
+  `~/.claude/projects`, `settings.json`, the project folders listed in
+  `WORK_PROJECTS` in `claude_backup_lib.sh`, and a few other pieces to
+  Dropbox. On FreeBSD, where there's no Dropbox app, it uploads the backup
+  with rclone instead.
+- `restore_claude.sh` is run by hand once Dropbox has finished syncing on a
+  new machine. It never overwrites a memory file that changed on both sides;
+  it saves the other version next to it for merging by hand.
 
-```bash
-bash restore_claude.sh
-```
+## Credits and license
 
-separately. It's not wired into the main `resume.sh` run because Dropbox's
-own sign-in/sync isn't something the rest of the script can wait on.
+The rofi theme (`config/home/.config/rofi`), the fastfetch configs and the
+kitty settings come from
+[LinuxBeginnings/Hyprland-Dots](https://github.com/LinuxBeginnings/Hyprland-Dots)
+by JaKooLit and contributors, licensed under GPL-3.0; their credit headers are
+kept in those files.
 
-The Dropbox side (keeping the backup itself current) is automated:
-`backup_claude.sh` rsyncs `~/.claude/projects` and `settings.json` to
-`~/Dropbox/claudebackup`, run automatically by a `SessionEnd` hook. No
-cron/systemd timer needed: rsync only copies what changed, so it's cheap to
-run at the end of every session. If Dropbox isn't set up on a machine, the
-script just exits quietly instead of failing.
-
-That hook is installed by `resume.sh` itself (`setup_claude_backup_hook`),
-not restored via Dropbox — it merges a `SessionEnd` entry into
-`~/.claude/settings.json` pointed at *this machine's* actual `$REPO_DIR`.
-Deliberately not just synced as part of `settings.json` from
-`~/Dropbox/claudebackup`: that path is frozen at backup time, and would be
-wrong on a fresh machine whose clone doesn't happen to live at the exact
-same path as wherever it was last backed up from.
-
-The same scripts also back up project folders under `~/Work` that exist
-only on this disk (listed in `WORK_PROJECTS` in `claude_backup_lib.sh`) to
-`~/Dropbox/claudebackup/work/`, and `restore_claude.sh` copies them back.
-These hold things that can't go in a public repo, like game data and ROMs.
-The backup never deletes files from the Dropbox copy.
+This repo is licensed under the GNU General Public License v3.0; see
+[LICENSE](LICENSE).

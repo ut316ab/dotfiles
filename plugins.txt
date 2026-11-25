@@ -1,7 +1,0 @@
-# Third-party Omarchy plugins to restore via:
-#   omarchy plugin add <url> --enable --yes
-# Optional third column: branch to check out afterwards.
-#
-# omapod: fork branch = upstream + PR #2 (science.nasa.gov) + PR #3 (Qt 6.12
-# Color fix). Switch back to the upstream URL once both are merged.
-dorneles.omapod https://github.com/ut316ab/omapod local/combined

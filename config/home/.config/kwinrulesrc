@@ -1,0 +1,42 @@
+[04c0e400-b64e-4a2c-8765-2e6f3518f7b0]
+Description=Steam on desktop 9
+desktops=55564100-5ba1-477c-a007-53d2eb802738
+desktopsrule=3
+wmclass=(?i)^steam$
+wmclasscomplete=false
+wmclassmatch=3
+
+[427d2608-b6dd-4872-8d04-9802922f5013]
+Description=Discord on desktop 10
+desktops=fb70d758-1fc7-46eb-8b08-c41610e63e39
+desktopsrule=3
+wmclass=(?i)^discord$
+wmclasscomplete=false
+wmclassmatch=3
+
+[732da6bf-5615-4f88-88b5-c94dfe937bad]
+Description=Zen on desktop 2
+desktops=32a12fb0-2334-4314-a4d9-9eccf2a2d689
+desktopsrule=3
+wmclass=(?i)^(zen|zen-browser|app\\.zen_browser\\.zen)$
+wmclasscomplete=false
+wmclassmatch=3
+
+[General]
+Order=04c0e400-b64e-4a2c-8765-2e6f3518f7b0,a64b1e5c-f4ac-41f5-aec7-49349a4be153,732da6bf-5615-4f88-88b5-c94dfe937bad,f036a4af-415b-4f7f-a7ee-51938cd21190,427d2608-b6dd-4872-8d04-9802922f5013
+
+[a64b1e5c-f4ac-41f5-aec7-49349a4be153]
+Description=Thunderbird on desktop 8
+desktops=d8c24460-2cd9-45a6-83c0-e56c1619e9a0
+desktopsrule=3
+wmclass=(?i)^(org\\.mozilla\\.)?thunderbird$
+wmclasscomplete=false
+wmclassmatch=3
+
+[f036a4af-415b-4f7f-a7ee-51938cd21190]
+Description=virt-manager on desktop 6
+desktops=a4b0aba3-c820-4a56-94f1-e4603697db0e
+desktopsrule=3
+wmclass=(?i)^(virt-manager|org\\.virt_manager\\.virt-manager)$
+wmclasscomplete=false
+wmclassmatch=3

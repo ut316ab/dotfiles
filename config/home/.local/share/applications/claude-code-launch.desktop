@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Claude Code
+Comment=Claude Code session in ~/Work, bound to Meta+Ctrl+Shift+A (command lives in ~/.local/bin/claude-code-launch.sh)
+Exec=/home/darryl/.local/bin/claude-code-launch.sh
+Icon=utilities-terminal
+Terminal=false
+NoDisplay=true

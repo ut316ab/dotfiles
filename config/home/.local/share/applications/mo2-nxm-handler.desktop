@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Mod Organizer 2 NXM Handler (Cosmoem)
+Exec=/home/darryl/.local/bin/mo2-nxm-handler.sh %u
+MimeType=x-scheme-handler/nxm;
+NoDisplay=true
+Terminal=false

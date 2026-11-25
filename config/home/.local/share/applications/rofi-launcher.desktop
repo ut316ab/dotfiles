@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Rofi Launcher
+Comment=App launcher, bound to Meta+D in KDE (see ~/.local/bin/rofi-launcher.sh)
+Exec=/home/darryl/.local/bin/rofi-launcher.sh
+NoDisplay=true

@@ -1,4 +1,7 @@
 caffeine-ng
-gotop
-paru
-zen-browser-bin
+curseforge-appimage
+dropbox
+kwin-effect-rounded-corners-git
+kwin-scripts-krohnkite
+ttf-victor-mono
+yay-bin

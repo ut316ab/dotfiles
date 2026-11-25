@@ -1,0 +1,4 @@
+# Local override (2026-11-25): CachyOS rules mark QEMU as Heavy_CPU (nice 9, ionice 7),
+# which makes interactive desktop VMs stutter. Give QEMU normal priority instead.
+{ "name": "qemu-system-x86_64", "nice": 0, "ioclass": "best-effort", "ionice": 4 }
+{ "name": "qemu-system-x86", "nice": 0, "ioclass": "best-effort", "ionice": 4 }
