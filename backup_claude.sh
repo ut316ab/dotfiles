@@ -59,7 +59,11 @@ for name in "${WORK_PROJECTS[@]}"; do
   src="$HOME/Work/$name"
   [[ -d "$src" ]] || continue
   mkdir -p "$BACKUP_DIR/work/$name"
-  if ! rsync_retry -a "$src/" "$BACKUP_DIR/work/$name/"; then
+  excludes=()
+  for ex in ${WORK_EXCLUDES[$name]:-}; do
+    excludes+=("--exclude=/$ex/")
+  done
+  if ! rsync_retry -a "${excludes[@]}" "$src/" "$BACKUP_DIR/work/$name/"; then
     echo "backup_claude.sh: rsync of $src failed after retries" >&2
   fi
   cleanup_rsync_temp_files "$BACKUP_DIR/work/$name"

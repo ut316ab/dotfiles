@@ -33,7 +33,21 @@ RCLONE_DROPBOX_REMOTE="Dropbox:"
 # backup_claude.sh copies each into $BACKUP_DIR/work/<name>, and
 # restore_claude.sh copies them back. Skipped on a machine that doesn't
 # have the folder.
-WORK_PROJECTS=(wizardry7-amiga rssreader)
+WORK_PROJECTS=(
+  wizardry7-amiga rssreader
+  # Fallout 4 work we built: Papyrus mods/patches, the PsiTarget F4SE plugin,
+  # the texture survey, and the plugin patches (LootMan fix, UD fixes, ...)
+  fo4-papyrus fo4-psitarget fo4-texture-survey fo4-patches
+)
+
+# Folders inside a project to leave out of the backup: game files and build
+# output that can be recreated, not work of ours. Space-separated, relative
+# to the project folder.
+declare -A WORK_EXCLUDES=(
+  [fo4-papyrus]="imports"            # Bethesda's script sources + WSFW clone
+  [fo4-psitarget]="build .xmake"     # compiler output
+  [fo4-texture-survey]="out"         # generated report
+)
 
 # Wizardry 8 save editor: ~/Work/Wizardry8Editor is a clone of a public repo
 # (anonidiot/Wizardry8Editor) with two uncommitted local fixes, and the
