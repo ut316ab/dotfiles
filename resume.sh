@@ -262,6 +262,20 @@ restore_configs() {
     (setsid kstart plasmashell >/dev/null 2>&1 &) || true
     # KWin reads its settings again (window rules, enabled scripts)
     qdbus6 org.kde.KWin /KWin reconfigure 2>/dev/null || true
+    # A new install has a new activity ID, so Plasma ignores the restored
+    # desktop and shows a plain image; put the saved wallpaper back live.
+    ~/.local/bin/kde-apply-saved-wallpaper.sh "$REPO_DIR/config/home/.config/plasma-org.kde.plasma.desktop-appletsrc" ||
+      warn "Couldn't re-apply the saved wallpaper; run ~/.local/bin/kde-apply-saved-wallpaper.sh after logging in."
+  fi
+
+  # KWin (it hosts the shortcut service in Plasma 6) keeps shortcuts in memory
+  # and writes kglobalshortcutsrc back out at logout, so the copy just restored
+  # is lost if KWin is running (seen 2026-11-26). This one-time unit copies it
+  # in again at the next login, before KWin starts, then disables itself.
+  if pgrep -x kwin_wayland >/dev/null; then
+    systemctl --user daemon-reload
+    systemctl --user enable restore-kde-shortcuts.service
+    log "Your shortcuts will be re-applied at your next login (KWin would overwrite them at logout)"
   fi
 }
 

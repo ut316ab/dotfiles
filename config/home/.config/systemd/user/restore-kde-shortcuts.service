@@ -1,0 +1,15 @@
+[Unit]
+Description=One-time: restore KDE shortcuts from dotfiles before KWin starts
+# KWin (which hosts kglobalaccel in Plasma 6) rewrites kglobalshortcutsrc from
+# memory when the session ends, so a copy made while KWin runs is lost at
+# logout. This copies the dotfiles version in before KWin reads it, once.
+Before=plasma-kwin_wayland.service
+ConditionPathExists=%h/dotfiles/config/home/.config/kglobalshortcutsrc
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/cp -f %h/dotfiles/config/home/.config/kglobalshortcutsrc %h/.config/kglobalshortcutsrc
+ExecStartPost=/usr/bin/systemctl --user disable restore-kde-shortcuts.service
+
+[Install]
+WantedBy=plasma-kwin_wayland.service
