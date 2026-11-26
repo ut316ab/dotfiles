@@ -195,6 +195,12 @@ setup_flatpak() {
   sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 }
 
+# Not called for now (2026-11-26): CachyOS KDE already enables Plasma Login
+# Manager as display-manager.service, so `systemctl enable sddm` fails and
+# set -e stops the whole restore. SDDM was only chosen for JaKooLit's Hyprland
+# wallpaper sync, which is gone. To revisit: Plasma Login Manager's own
+# wallpaper setting (System Settings > Login Screen), or switch to SDDM by
+# disabling plasmalogin first.
 setup_sddm() {
   log "Enabling the SDDM login screen"
   sudo systemctl enable sddm
@@ -421,7 +427,7 @@ main() {
   setup_ananicy
   setup_ufw
   setup_flatpak
-  setup_sddm
+  # setup_sddm  # skipped for now, see the comment above setup_sddm
 
   setup_oh_my_zsh
   restore_configs
