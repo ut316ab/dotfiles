@@ -103,6 +103,39 @@ install_packages() {
   fi
 }
 
+# Krohnkite (KWin tiling) is installed from its release .kwinscript, not the
+# AUR package: the AUR PKGBUILD also checksums Codeberg's auto-generated source
+# tarball, which Codeberg regenerates, so the build fails with "0.9.9.2.tar.gz
+# ... FAILED" (seen 2026-11-03 and 2026-11-26) although the .kwinscript itself
+# is unchanged. The sha256 below is the AUR's own for that .kwinscript.
+# Per-user install, not tracked by pacman: to update, bump both values.
+KROHNKITE_VERSION=0.9.9.2
+KROHNKITE_SHA256=42f7f66531d366c74b5fc860381da3517ccb4cdccd1f80c122fcab6e9a8fcf7e
+
+install_krohnkite() {
+  local dir="$HOME/.local/share/kwin/scripts/krohnkite"
+  if grep -qs "\"Version\": *\"$KROHNKITE_VERSION\"" "$dir/metadata.json"; then
+    log "Krohnkite $KROHNKITE_VERSION already installed"
+    return
+  fi
+  log "Installing Krohnkite $KROHNKITE_VERSION"
+  local tmp
+  tmp="$(mktemp -d)"
+  curl -fsSL -o "$tmp/krohnkite.kwinscript" \
+    "https://codeberg.org/anametologin/Krohnkite/releases/download/$KROHNKITE_VERSION/krohnkite.kwinscript"
+  if ! echo "$KROHNKITE_SHA256  $tmp/krohnkite.kwinscript" | sha256sum -c --quiet -; then
+    warn "Krohnkite download doesn't match the expected checksum; not installing it."
+    rm -rf "$tmp"
+    return 1
+  fi
+  if [[ -d $dir ]]; then
+    kpackagetool6 --type KWin/Script --upgrade "$tmp/krohnkite.kwinscript"
+  else
+    kpackagetool6 --type KWin/Script --install "$tmp/krohnkite.kwinscript"
+  fi
+  rm -rf "$tmp"
+}
+
 # --- 5-10. system setup (sudo) --------------------------------------------------
 
 setup_sshd() {
@@ -380,6 +413,7 @@ main() {
 
   install_paru
   install_packages
+  install_krohnkite
 
   setup_sshd
   setup_libvirt

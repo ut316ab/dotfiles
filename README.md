@@ -54,7 +54,7 @@ When it finishes, it lists what's left to do by hand:
 Oh My Zsh and its plugins, the
 [agnosterzak](https://github.com/zakaziko99/agnosterzak-ohmyzsh-theme) theme,
 the [Catppuccin](https://github.com/catppuccin) themes for btop and micro,
-LazyVim, and Krohnkite (from the AUR) are all downloaded from their own
+LazyVim, and Krohnkite (its checksum-verified release file) are all downloaded from their own
 sources during the restore. They belong to their authors, so they aren't
 copied into this repo.
 
