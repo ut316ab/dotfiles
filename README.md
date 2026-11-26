@@ -35,7 +35,8 @@ When it finishes, it lists what's left to do by hand:
 - **System:** SSH server, libvirt/QEMU (VMs run as my user), a unit that
   backs up VM definitions to `/mnt/storage` whenever they change, an
   ananicy-cpp override so VMs run at normal priority, the firewall (only KDE
-  Connect and SSH allowed in), Flathub, the SDDM login screen.
+  Connect and SSH allowed in), Flathub, the Plasma Login Manager login screen
+  with the APOD Picture of the Day wallpaper.
 - **My configs:** everything under `config/home/` is copied into `~`: KDE
   Plasma settings (look, window rules, shortcuts, panel, monitor), kitty,
   zsh, rofi (Meta+D launcher), fastfetch, btop, micro, MangoHud, my scripts

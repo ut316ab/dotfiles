@@ -195,15 +195,22 @@ setup_flatpak() {
   sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 }
 
-# Not called for now (2026-11-26): CachyOS KDE already enables Plasma Login
-# Manager as display-manager.service, so `systemctl enable sddm` fails and
-# set -e stops the whole restore. SDDM was only chosen for JaKooLit's Hyprland
-# wallpaper sync, which is gone. To revisit: Plasma Login Manager's own
-# wallpaper setting (System Settings > Login Screen), or switch to SDDM by
-# disabling plasmalogin first.
-setup_sddm() {
-  log "Enabling the SDDM login screen"
-  sudo systemctl enable sddm
+# Login screen: Plasma Login Manager, which CachyOS KDE already enables, showing
+# the same APOD Picture of the Day as the desktop, centered (FillMode 6).
+# This replaces the old SDDM step: SDDM was only there for JaKooLit's Hyprland
+# wallpaper sync, and enabling it failed because display-manager.service
+# already points at plasmalogin. Keys from plasma-login-manager 6.8.3:
+# [Greeter] WallpaperPluginId, and the plugin's own settings (its main.xml
+# groups) under [Greeter][Wallpaper][<plugin>].
+setup_login_screen() {
+  log "Setting the login screen wallpaper to APOD (Picture of the Day)"
+  local conf=/etc/plasmalogin.conf
+  [[ -f $conf.before-resume ]] || sudo cp -a "$conf" "$conf.before-resume" 2>/dev/null || true
+  sudo kwriteconfig6 --file "$conf" --group Greeter --key WallpaperPluginId org.kde.potd
+  sudo kwriteconfig6 --file "$conf" --group Greeter --group Wallpaper --group org.kde.potd \
+    --group General --key Provider apod
+  sudo kwriteconfig6 --file "$conf" --group Greeter --group Wallpaper --group org.kde.potd \
+    --group General --key FillMode 6
 }
 
 # --- 11-14. your files ----------------------------------------------------------
@@ -441,7 +448,7 @@ main() {
   setup_ananicy
   setup_ufw
   setup_flatpak
-  # setup_sddm  # skipped for now, see the comment above setup_sddm
+  setup_login_screen
 
   setup_oh_my_zsh
   restore_configs
