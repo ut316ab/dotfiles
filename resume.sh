@@ -158,7 +158,8 @@ setup_libvirt() {
 
 # Copies VM definitions and their UEFI variables to /mnt/storage whenever they
 # change (a .path unit watches the folders). Does nothing harmful if
-# /mnt/storage isn't mounted; it just fails until it is.
+# /mnt/storage isn't mounted; it just fails until it is. Never deletes from the
+# backup (no rsync --delete), so a fresh install can't wipe it.
 setup_libvirt_config_backup() {
   log "Installing the libvirt config backup units"
   sudo install -m 644 "$REPO_DIR/config/etc/systemd/system/libvirt-config-backup.path" \

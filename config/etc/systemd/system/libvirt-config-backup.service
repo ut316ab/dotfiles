@@ -1,5 +1,5 @@
 [Unit]
-Description=Mirror libvirt VM definitions and UEFI vars to /mnt/storage
+Description=Copy libvirt VM definitions and UEFI vars to /mnt/storage
 # Started by libvirt-config-backup.path whenever the config changes.
 # Skips quietly when the USB storage drive isn't mounted (e.g. after a warm reboot).
 ConditionPathIsMountPoint=/mnt/storage
@@ -9,6 +9,10 @@ Type=oneshot
 # Let a burst of changes (virt-manager writes several files) settle into one copy.
 ExecStartPre=/usr/bin/sleep 3
 ExecStart=/usr/bin/mkdir -p /mnt/storage/libvirt-config-backup
-ExecStart=/usr/bin/rsync -a --delete /etc/libvirt/qemu/ /mnt/storage/libvirt-config-backup/qemu/
-ExecStart=/usr/bin/rsync -a --delete /var/lib/libvirt/qemu/nvram/ /mnt/storage/libvirt-config-backup/nvram/
-ExecStart=/usr/bin/rsync -a --delete /var/lib/libvirt/qemu/varstore/ /mnt/storage/libvirt-config-backup/varstore/
+# No --delete: this used to mirror with --delete, and on a fresh install (no VMs
+# defined yet) one run wiped the backed-up VM definitions and UEFI vars
+# (2026-11-26). Now files are only added or updated, never removed; a VM you
+# undefine stays in the backup until you delete its files there by hand.
+ExecStart=/usr/bin/rsync -a /etc/libvirt/qemu/ /mnt/storage/libvirt-config-backup/qemu/
+ExecStart=/usr/bin/rsync -a /var/lib/libvirt/qemu/nvram/ /mnt/storage/libvirt-config-backup/nvram/
+ExecStart=/usr/bin/rsync -a /var/lib/libvirt/qemu/varstore/ /mnt/storage/libvirt-config-backup/varstore/
