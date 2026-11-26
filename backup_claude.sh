@@ -69,6 +69,18 @@ for name in "${WORK_PROJECTS[@]}"; do
   cleanup_rsync_temp_files "$BACKUP_DIR/work/$name"
 done
 
+# Folders directly under ~ (see HOME_FOLDERS in claude_backup_lib.sh). Same
+# rules as the projects: no --delete, a failure is reported but not fatal.
+for name in "${HOME_FOLDERS[@]}"; do
+  src="$HOME/$name"
+  [[ -d "$src" ]] || continue
+  mkdir -p "$BACKUP_DIR/home/$name"
+  if ! rsync_retry -a "${HOME_FOLDER_EXCLUDES[@]}" "$src/" "$BACKUP_DIR/home/$name/"; then
+    echo "backup_claude.sh: rsync of $src failed after retries" >&2
+  fi
+  cleanup_rsync_temp_files "$BACKUP_DIR/home/$name"
+done
+
 # Wizardry 8 save editor (see W8_EDITOR_SRC in claude_backup_lib.sh). The
 # patch is only replaced when the clone still has local changes, so a fresh
 # upstream checkout can't overwrite the saved fixes with an empty file.

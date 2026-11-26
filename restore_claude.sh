@@ -110,6 +110,23 @@ for name in "${WORK_PROJECTS[@]}"; do
   cleanup_rsync_temp_files "$HOME/Work/$name"
 done
 
+# Folders directly under ~ (see HOME_FOLDERS in claude_backup_lib.sh). -u, so
+# a file that's newer locally is never overwritten.
+for name in "${HOME_FOLDERS[@]}"; do
+  src="$BACKUP_DIR/home/$name"
+  [[ -d "$src" ]] || continue
+  mkdir -p "$HOME/$name"
+  if rsync_retry -au "$src/" "$HOME/$name/"; then
+    # Dropbox doesn't keep Unix permissions, and ssh refuses a private key
+    # others can read (vms holds VM SSH keys), so make it owner-only again.
+    chmod -R go-rwx "$HOME/$name"
+    echo "Restored ~/$name from Dropbox"
+  else
+    echo "restore_claude.sh: rsync of ~/$name failed after retries" >&2
+  fi
+  cleanup_rsync_temp_files "$HOME/$name"
+done
+
 # Skills (see CLAUDE_SKILLS in claude_backup_lib.sh). A skill that already
 # works here is left alone - it may be a symlink into a package, and copying
 # through it would write into a root-owned folder. A broken link (the package

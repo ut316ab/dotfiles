@@ -40,6 +40,16 @@ WORK_PROJECTS=(
   fo4-papyrus fo4-psitarget fo4-texture-survey fo4-patches
 )
 
+# Folders directly under ~ (outside ~/Work) that live only on this disk.
+# backup_claude.sh copies each into $BACKUP_DIR/home/<name>, and
+# restore_claude.sh copies them back. vms holds the small per-VM files: SSH
+# key, ssh.sh helper, domain XML (the disk images live on /mnt/storage;
+# lost on the 2026-11-26 reinstall because nothing backed them up).
+HOME_FOLDERS=(vms)
+# Never copied from HOME_FOLDERS: disk images and ISOs, which are big and
+# belong on /mnt/storage, not in Dropbox.
+HOME_FOLDER_EXCLUDES=(--exclude='*.qcow2' --exclude='*.img' --exclude='*.raw' --exclude='*.iso')
+
 # Folders inside a project to leave out of the backup: game files and build
 # output that can be recreated, not work of ours. Space-separated, relative
 # to the project folder.
